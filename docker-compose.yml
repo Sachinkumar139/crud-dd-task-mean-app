@@ -13,12 +13,12 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: dockerfile
     container_name: mean-backend
     restart: always
     environment:
       - PORT=8080
-      - MONGODB_URI=mongodb://mongo:27017/tutorials_db
+      - MONGODB_URI=mongodb://mongo:27017/mydb
     ports:
       - "8080:8080"
     depends_on:
@@ -27,11 +27,11 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: dockerfile
     container_name: mean-frontend
     restart: always
-    ports:
-      - "8081:80"
+    expose: 
+      - "80"
     depends_on:
       - backend
 
@@ -45,7 +45,7 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
 
 volumes:
   mongo-data:
