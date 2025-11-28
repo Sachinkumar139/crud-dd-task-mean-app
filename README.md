@@ -134,12 +134,10 @@ docker compose up --build -d
 | `DOCKERHUB_TOKEN`    | Docker Hub Access Token  |
 | `EC2_HOST`           | EC2 Public IP            |
 | `EC2_USER`           | ec2-user / ubuntu        |
-| `EC2_SSH_KEY`        | Your private SSH key     |<img width="1918" height="1025" alt="p8" src="https://github.com/user-attachments/assets/8f109014-a104-4172-bc25-19977402e83f" />
-<img width="1918" height="1033" alt="p7" src="https://github.com/user-attachments/assets/8e2b1d2f-1da4-43ef-8a65-ffa89ade0e96" />
-<img width="1907" height="1022" alt="p6" src="https://github.com/user-attachments/assets/aba49b0e-3f1a-49a5-8f00-7101b1928956" />
-<img width="1907" height="1022" alt="p6" src="https://github.com/user-attachments/assets/b73b3d1c-cca2-4c25-93f7-bcdabf9dd9c7" />
-<img width="1908" height="1070" alt="p5" src="https://github.com/user-attachments/assets/06617bc9-e627-4ec5-bb97-e9d8cfc0c70e" />
-<img width="1908" height="1070" alt="p5" src="https://github.com/user-attachments/assets/ce30b37f-ee9a-434e-9473-e562039bf35f" />
-<img width="1901" height="1041" alt="p4" src="https://github.com/user-attachments/assets/f5e2ea6a-1540-4677-a615-1c0860c76f76" />
-<img width="1918" height="1051" alt="p3" src="https://github.com/user-attachments/assets/aa37b628-528b-4df4-8abc-b845b71d234e" />
-<img width="1918" height="1078" alt="p2" src="https://github.com/user-attachments/assets/181b14a5-dbbb-45f7-885b-6be7a4ab1e0c" />
+| `EC2_SSH_KEY`        | Your private SSH key     |<img width="1918" height="1055" alt="p9" src="https://github.com/user-attachments/assets/96c33f16-a7c1-4282-84b8-5314cc0790eb" />
+<img width="1918" height="1025" alt="p8" src="https://github.com/user-attachments/assets/0a324bb7-0cc6-439c-877d-bdcc51500237" />
+<img width="1918" height="1033" alt="p7" src="https://github.com/user-attachments/assets/dbe07255-561f-4abe-ab06-54098b2ef516" />
+<img width="1907" height="1022" alt="p6" src="https://github.com/user-attachments/assets/90c347ec-5909-4c94-b009-bf2fb14d3d18" />
+<img width="1908" height="1070" alt="p5" src="https://github.com/user-attachments/assets/5b83dbf3-4a9d-42ba-8144-24aec31a019b" />
+<img width="1901" height="1041" alt="p4" src="https://github.com/user-attachments/assets/317f4e97-b456-44ce-a1b0-0ee39a95de02" />
+-
