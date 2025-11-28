@@ -58,13 +58,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to Ubuntu VM via SSH
+      - name: Deploy to Ubuntu EC2 via SSH
         uses: appleboy/ssh-action@v0.1.10
         with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /home/ubuntu/crud-dd-task-mean-app
+            cd ~/crud-dd-task-mean-app
             docker compose pull
             docker compose up -d
