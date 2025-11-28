@@ -66,5 +66,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ~/crud-dd-task-mean-app
+            docker compose down
             docker compose pull
             docker compose up -d
