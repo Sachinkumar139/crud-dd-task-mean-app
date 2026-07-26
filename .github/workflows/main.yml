@@ -1,83 +1,131 @@
-name: Build and Deploy MEAN Application
+name: Deploy MEAN Application to Amazon EKS
 
 on:
   push:
     branches:
       - main
 
+env:
+  CLUSTER_NAME: mean-cluster
+  AWS_REGION: us-east-1
+
 jobs:
+
   deploy:
+
     runs-on: ubuntu-latest
 
     steps:
 
-      - name: Checkout Repository
-        uses: actions/checkout@v5
+    - name: Checkout Source
+      uses: actions/checkout@v5
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+    ######################################################
+    # Login Docker Hub
+    ######################################################
 
-      ####################################
-      # Build Backend Image
-      ####################################
-      - name: Build Backend
-        run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/backend:v1 ./backend
+    - name: Login Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Push Backend
-        run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/backend:v1
+    ######################################################
+    # Build Backend
+    ######################################################
 
-      ####################################
-      # Build Frontend Image
-      ####################################
-      - name: Build Frontend
-        run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/frontend:v1 ./frontend
+    - name: Build Backend
+      run: |
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/backend:v1 ./backend
 
-      - name: Push Frontend
-        run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/frontend:v1
+    - name: Push Backend
+      run: |
+        docker push ${{ secrets.DOCKER_USERNAME }}/backend:v1
 
-      ####################################
-      # Install kubectl
-      ####################################
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v4
-        with:
-          version: latest
+    ######################################################
+    # Build Frontend
+    ######################################################
 
-      ####################################
-      # Configure kubeconfig
-      ####################################
-      - name: Configure kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > ~/.kube/config
+    - name: Build Frontend
+      run: |
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/frontend:v1 ./frontend
 
-      ####################################
-      # Deploy Kubernetes Resources
-      ####################################
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl apply -f k8s/
+    - name: Push Frontend
+      run: |
+        docker push ${{ secrets.DOCKER_USERNAME }}/frontend:v1
 
-      ####################################
-      # Restart Deployments
-      ####################################
-      - name: Restart Deployments
-        run: |
-          kubectl rollout restart deployment/backend -n mean-app
-          kubectl rollout restart deployment/frontend -n mean-app
+    ######################################################
+    # Configure AWS
+    ######################################################
 
-      ####################################
-      # Verify Deployment
-      ####################################
-      - name: Verify Rollout
-        run: |
-          kubectl rollout status deployment/backend -n mean-app
-          kubectl rollout status deployment/frontend -n mean-app
-          kubectl get pods -n mean-app
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    ######################################################
+    # Install kubectl
+    ######################################################
+
+    - name: Install kubectl
+      uses: azure/setup-kubectl@v4
+      with:
+        version: latest
+
+    ######################################################
+    # Install eksctl
+    ######################################################
+
+    - name: Install eksctl
+      run: |
+        curl --silent --location \
+        "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" \
+        | tar xz -C /tmp
+
+        sudo mv /tmp/eksctl /usr/local/bin
+
+    ######################################################
+    # Update kubeconfig
+    ######################################################
+
+    - name: Configure kubeconfig
+      run: |
+        aws eks update-kubeconfig \
+          --region $AWS_REGION \
+          --name $CLUSTER_NAME
+
+    ######################################################
+    # Deploy Kubernetes Manifests
+    ######################################################
+
+    - name: Deploy Application
+      run: |
+        kubectl apply -f k8s/
+
+    ######################################################
+    # Restart Deployments
+    ######################################################
+
+    - name: Restart Pods
+      run: |
+        kubectl rollout restart deployment/backend -n mean-app
+        kubectl rollout restart deployment/frontend -n mean-app
+
+    ######################################################
+    # Verify Deployment
+    ######################################################
+
+    - name: Verify Rollout
+      run: |
+        kubectl rollout status deployment/backend -n mean-app
+        kubectl rollout status deployment/frontend -n mean-app
+
+    ######################################################
+    # Show Resources
+    ######################################################
+
+    - name: Show Pods
+      run: |
+        kubectl get all -n mean-app

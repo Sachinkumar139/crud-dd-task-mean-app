@@ -21,8 +21,8 @@ spec:
 
       - name: backend
 
-        image: backend:v1
-        imagePullPolicy: IfNotPresent
+        image: sachin139/backend:v1
+        imagePullPolicy: always
 
         ports:
         - containerPort: 3000
