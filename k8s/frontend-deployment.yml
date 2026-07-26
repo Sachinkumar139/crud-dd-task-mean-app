@@ -25,7 +25,7 @@ spec:
       - name: frontend
 
         image: sachin139/frontend:v1
-        imagePullPolicy: always
+        imagePullPolicy: IfNotPresent
 
         ports:
         - containerPort: 80
