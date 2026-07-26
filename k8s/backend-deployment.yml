@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: mean-app
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: backend
+
+  template:
+    metadata:
+      labels:
+        app: backend
+
+    spec:
+      containers:
+
+      - name: backend
+
+        image: backend:v1
+        imagePullPolicy: IfNotPresent
+
+        ports:
+        - containerPort: 3000
+
+        env:
+
+        - name: MONGO_URI
+          value: mongodb://admin:password@mongodb-service:27017
+
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+
+          limits:
+            memory: "512Mi"
+            cpu: "500m"

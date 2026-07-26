@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: mean-app-ingress
+  namespace: mean-app
+
+spec:
+
+  ingressClassName: nginx
+
+  rules:
+
+  - host: meanapp.local
+
+    http:
+
+      paths:
+
+      - path: /
+
+        pathType: Prefix
+
+        backend:
+
+          service:
+
+            name: frontend-service
+
+            port:
+
+              number: 80

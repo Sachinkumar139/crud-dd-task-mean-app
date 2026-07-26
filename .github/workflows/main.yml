@@ -1,4 +1,4 @@
-name: crud-dd-task-mean-app
+name: Build and Deploy MEAN Application
 
 on:
   push:
@@ -6,66 +6,78 @@ on:
       - main
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
 
-      # FRONTEND (Angular)
-      - name: Set up Node for Angular
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
+      - name: Checkout Repository
+        uses: actions/checkout@v5
 
-      - name: Install Dependencies (Angular)
-        working-directory: ./frontend
-        run: npm install
-
-      - name: Build Angular App
-        working-directory: ./frontend
-        run: npm run build --prod
-
-      # -------------------------------
-      # DOCKER LOGIN
-      # -------------------------------
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # -------------------------------
-      # BUILD & PUSH DOCKER IMAGES
-      # -------------------------------
-      - name: Build Frontend Image
+      ####################################
+      # Build Backend Image
+      ####################################
+      - name: Build Backend
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/mean-frontend:latest ./frontend
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/backend:v1 ./backend
 
-      - name: Build Backend Image
+      - name: Push Backend
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/mean-backend:latest ./backend
+          docker push ${{ secrets.DOCKER_USERNAME }}/backend:v1
 
-      - name: Push Frontend Image
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/mean-frontend:latest
+      ####################################
+      # Build Frontend Image
+      ####################################
+      - name: Build Frontend
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/frontend:v1 ./frontend
 
-      - name: Push Backend Image
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/mean-backend:latest
+      - name: Push Frontend
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/frontend:v1
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Deploy to Ubuntu EC2 via SSH
-        uses: appleboy/ssh-action@v0.1.10
+      ####################################
+      # Install kubectl
+      ####################################
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd ~/crud-dd-task-mean-app
-            docker compose down
-            docker compose pull
-            docker compose up -d
+          version: latest
+
+      ####################################
+      # Configure kubeconfig
+      ####################################
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > ~/.kube/config
+
+      ####################################
+      # Deploy Kubernetes Resources
+      ####################################
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/
+
+      ####################################
+      # Restart Deployments
+      ####################################
+      - name: Restart Deployments
+        run: |
+          kubectl rollout restart deployment/backend -n mean-app
+          kubectl rollout restart deployment/frontend -n mean-app
+
+      ####################################
+      # Verify Deployment
+      ####################################
+      - name: Verify Rollout
+        run: |
+          kubectl rollout status deployment/backend -n mean-app
+          kubectl rollout status deployment/frontend -n mean-app
+          kubectl get pods -n mean-app
