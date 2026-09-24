@@ -95,7 +95,7 @@ jobs:
 
       - name: Push Backend Image
         run: |
-          docker push sachin139/mean-backend:$v1
+          docker push sachin139/mean-backend:v1
 
 
   # =====================================
