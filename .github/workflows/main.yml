@@ -1,131 +1,201 @@
-name: Deploy MEAN Application to Amazon EKS
+name: CI-CD-EKS
 
 on:
   push:
     branches:
       - main
 
-env:
-  CLUSTER_NAME: mean-cluster
-  AWS_REGION: us-east-1
-
 jobs:
 
-  deploy:
-
+  # =====================================
+  # 1. CODE QUALITY + DOCKER BUILD
+  # =====================================
+  build-test-sonarqube:
+    name: Build, Test and SonarQube
     runs-on: ubuntu-latest
 
     steps:
 
-    - name: Checkout Source
-      uses: actions/checkout@v5
+      - name: Checkout Code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
-    ######################################################
-    # Login Docker Hub
-    ######################################################
+      # -------------------------------
+      # Frontend
+      # -------------------------------
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
 
-    - name: Login Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
 
-    ######################################################
-    # Build Backend
-    ######################################################
+      - name: Test Frontend
+        working-directory: frontend
+        run: npm test -- --watch=false
+        continue-on-error: true
 
-    - name: Build Backend
-      run: |
-        docker build -t ${{ secrets.DOCKER_USERNAME }}/backend:v1 ./backend
+      # -------------------------------
+      # Backend
+      # -------------------------------
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm ci
 
-    - name: Push Backend
-      run: |
-        docker push ${{ secrets.DOCKER_USERNAME }}/backend:v1
+      - name: Test Backend
+        working-directory: backend
+        run: npm test
+        continue-on-error: true
 
-    ######################################################
-    # Build Frontend
-    ######################################################
+      # -------------------------------
+      # SonarQube
+      # -------------------------------
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v7
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-    - name: Build Frontend
-      run: |
-        docker build -t ${{ secrets.DOCKER_USERNAME }}/frontend:v1 ./frontend
+      # -------------------------------
+      # Docker Hub Login
+      # -------------------------------
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Push Frontend
-      run: |
-        docker push ${{ secrets.DOCKER_USERNAME }}/frontend:v1
+      # -------------------------------
+      # Build Frontend Image
+      # -------------------------------
+      - name: Build Frontend Docker Image
+        run: |
+          docker build \
+            -t sachin139/mean-frontend:v1 \
+            ./frontend
 
-    ######################################################
-    # Configure AWS
-    ######################################################
+      # -------------------------------
+      # Build Backend Image
+      # -------------------------------
+      - name: Build Backend Docker Image
+        run: |
+          docker build \
+            -t sachin139/mean-backend:v1 \
+            ./backend
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+      # -------------------------------
+      # Push Images to Docker Hub
+      # -------------------------------
+      - name: Push Frontend Image
+        run: |
+          docker push sachin139/mean-frontend:v1
 
-    ######################################################
-    # Install kubectl
-    ######################################################
+      - name: Push Backend Image
+        run: |
+          docker push sachin139/mean-backend:$v1
 
-    - name: Install kubectl
-      uses: azure/setup-kubectl@v4
-      with:
-        version: latest
 
-    ######################################################
-    # Install eksctl
-    ######################################################
+  # =====================================
+  # 2. TERRAFORM
+  # =====================================
+  terraform:
+    name: Terraform Infrastructure
+    runs-on: ubuntu-latest
+    needs: build-test-sonarqube
 
-    - name: Install eksctl
-      run: |
-        curl --silent --location \
-        "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" \
-        | tar xz -C /tmp
+    defaults:
+      run:
+        working-directory: terraform
 
-        sudo mv /tmp/eksctl /usr/local/bin
+    steps:
 
-    ######################################################
-    # Update kubeconfig
-    ######################################################
+      - name: Checkout Code
+        uses: actions/checkout@v5
 
-    - name: Configure kubeconfig
-      run: |
-        aws eks update-kubeconfig \
-          --region $AWS_REGION \
-          --name $CLUSTER_NAME
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
-    ######################################################
-    # Deploy Kubernetes Manifests
-    ######################################################
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
 
-    - name: Deploy Application
-      run: |
-        kubectl apply -f k8s/
+      # IMPORTANT
+      - name: Terraform Init
+        run: terraform init
 
-    ######################################################
-    # Restart Deployments
-    ######################################################
+      - name: Terraform Validate
+        run: terraform validate
 
-    - name: Restart Pods
-      run: |
-        kubectl rollout restart deployment/backend -n mean-app
-        kubectl rollout restart deployment/frontend -n mean-app
+      - name: Terraform Plan
+        run: terraform plan
 
-    ######################################################
-    # Verify Deployment
-    ######################################################
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
 
-    - name: Verify Rollout
-      run: |
-        kubectl rollout status deployment/backend -n mean-app
-        kubectl rollout status deployment/frontend -n mean-app
 
-    ######################################################
-    # Show Resources
-    ######################################################
+  # =====================================
+  # 3. DEPLOY TO EKS
+  # =====================================
+  deploy:
+    name: Deploy Application to EKS
+    runs-on: ubuntu-latest
+    needs: terraform
 
-    - name: Show Pods
-      run: |
-        kubectl get all -n mean-app
+    steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@v5
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: latest
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig \
+            --region us-east-1 \
+            --name mean-app-cluster
+
+      - name: Deploy Kubernetes Manifests
+        run: |
+          kubectl apply -f k8s/
+
+      - name: Update Frontend Image
+        run: |
+          kubectl set image deployment/frontend \
+            frontend=sachin139/mean-frontend:${{ github.sha }} \
+            -n mean-app
+
+      - name: Update Backend Image
+        run: |
+          kubectl set image deployment/backend \
+            backend=sachin139/mean-backend:${{ github.sha }} \
+            -n mean-app
+
+      - name: Wait for Frontend
+        run: |
+          kubectl rollout status deployment/frontend \
+            -n mean-app
+
+      - name: Wait for Backend
+        run: |
+          kubectl rollout status deployment/backend \
+            -n mean-app
+
+      - name: Verify Pods
+        run: |
+          kubectl get pods -n mean-app
