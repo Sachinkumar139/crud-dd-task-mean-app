@@ -12,7 +12,7 @@ jobs:
   # =====================================
   build-test-sonarqube:
     name: Build, Test and SonarQube
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
 
     steps:
 
@@ -177,13 +177,13 @@ jobs:
       - name: Update Frontend Image
         run: |
           kubectl set image deployment/frontend \
-            frontend=sachin139/mean-frontend:${{ github.sha }} \
+            frontend=sachin139/mean-frontend:v1 \
             -n mean-app
 
       - name: Update Backend Image
         run: |
           kubectl set image deployment/backend \
-            backend=sachin139/mean-backend:${{ github.sha }} \
+            backend=sachin139/mean-backend:v1 \
             -n mean-app
 
       - name: Wait for Frontend
