@@ -12,7 +12,7 @@ jobs:
   # =====================================
   build-test-sonarqube:
     name: Build, Test and SonarQube
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
 
@@ -53,11 +53,11 @@ jobs:
       # -------------------------------
       # SonarQube
       # -------------------------------
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v7
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      # - name: SonarQube Scan
+      #   uses: SonarSource/sonarqube-scan-action@v7
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
       # -------------------------------
       # Docker Hub Login
