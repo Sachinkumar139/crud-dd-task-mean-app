@@ -27,7 +27,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 18
 
       - name: Install Frontend Dependencies
         working-directory: frontend
